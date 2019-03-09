@@ -4,6 +4,14 @@
   "description": "",
   "scripts": {
   },
-  "author": "",
-  "license": "ISC"
+  "author": "fleetstreetsingers",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fleetstreetsingers/fleetstreetdotcom.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fleetstreetsingers/fleetstreetdotcom/issues"
+  },
+  "homepage": "https://github.com/fleetstreetsingers/fleetstreetdotcom#readme"
 }
