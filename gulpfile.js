@@ -3,37 +3,43 @@ const sass = require('gulp-sass')
 const concat = require('gulp-concat')
 const replace = require('gulp-replace')
 const hash = require('gulp-hash')
+const del = require('del')
 const fs = require('fs')
 
-const hashManifest = function(){
+const ENV = {}
+
+const cachebust = function(){
 	return hash.manifest('cachebusters.json', {
 		append: true,
-		deleteOld: true,
 		sourceDir: './docs',
 		space: '\t'
 	})
 }
 
+function clean(){
+	return del(['./docs'])
+}
+
 function buildCSS(){
 	return src([
-		'./src/css/*.scss'
+		'./src/css/**'
 	])
 	.pipe(concat('main.css'))
 	.pipe(sass({outputStyle: 'expanded'}))
 	.pipe(hash())
 	.pipe(dest('./docs'))
-	.pipe(hashManifest())
+	.pipe(cachebust())
 	.pipe(dest('.'))
 }
 
 function buildJS(){
 	return src([
-		'./src/js/*.js'
+		'./src/js/**'
 	])
 	.pipe(concat('main.js'))
 	.pipe(hash())
 	.pipe(dest('./docs'))
-	.pipe(hashManifest())
+	.pipe(cachebust())
 	.pipe(dest('.'))
 }
 
@@ -44,42 +50,38 @@ function buildVendorJS(){
 	.pipe(concat('vendor.js'))
 	.pipe(hash())
 	.pipe(dest('./docs'))
-	.pipe(hashManifest())
+	.pipe(cachebust())
 	.pipe(dest('.'))
 }
 
 function buildHTMLTemplates(){
-	const ENV = {}
+	const env = JSON.parse(JSON.stringify(ENV))
 
 	const cachebusters = JSON.parse(fs.readFileSync('./cachebusters.json'))
-	Object.assign(ENV, cachebusters)
+	Object.assign(env, cachebusters)
 
 	return src([
-		'./src/*.html'
-	])
-	.pipe(replace(/\$([a-zA-Z0-9\._-]+)\$/ig, (match, varname)=>{
-		return ENV[varname] || match
+		'./src/html/**'
+	], {base: './src/html'})
+	.pipe(replace(/\{\%\s*([a-zA-Z0-9\._-]+)\s*\%\}/ig, (match, varname)=>{
+		return env[varname] || match
 	}))
 	.pipe(dest('./docs'))
 }
 
 exports.build = series([
+	clean,
 	buildCSS,
 	buildJS,
 	buildVendorJS,
 	buildHTMLTemplates
 ])
 
-exports.watch = parallel([
-	()=>watch('./src/css/*.scss', {ignoreInitial: false}, series([
+exports.watch = ()=>{
+	return watch('./src/**', {ignoreInitial: false}, series([
+		clean,
 		buildCSS,
-		buildHTMLTemplates
-	])),
-	()=>watch('./src/js/*.js', {ignoreInitial: false}, series([
 		buildJS,
 		buildHTMLTemplates
-	])),
-	()=>watch('./src/*.html', {ignoreInitial: false}, series([
-		buildHTMLTemplates
 	]))
-])
+}

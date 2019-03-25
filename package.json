@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/fleetstreetsingers/fleetstreetdotcom#readme",
   "devDependencies": {
+    "del": "^4.0.0",
     "gulp": "^4.0.0",
     "gulp-concat": "^2.6.1",
     "gulp-hash": "^4.2.2",
