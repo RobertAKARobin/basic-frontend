@@ -2,44 +2,42 @@ const {src, dest, parallel, series, watch} = require('gulp')
 const sass = require('gulp-sass')
 const concat = require('gulp-concat')
 const replace = require('gulp-replace')
-const hash = require('gulp-hash')
+const hashFilename = require('gulp-hash')
 const del = require('del')
 const fs = require('fs')
 
 const ENV = {}
 
-const cachebust = function(){
-	return hash.manifest('cachebusters.json', {
+const logFilenameHash = function(){
+	const cachebusters = JSON.parse(fs.readFileSync('./cachebusters.json'))
+	Object.assign(ENV, cachebusters)
+	return hashFilename.manifest('cachebusters.json', {
 		append: true,
 		sourceDir: './docs',
 		space: '\t'
 	})
 }
 
-function clean(){
-	return del(['./docs'])
-}
-
 function buildCSS(){
 	return src([
 		'./src/css/**'
-	])
+	], {base: './src/css'})
 	.pipe(concat('main.css'))
 	.pipe(sass({outputStyle: 'expanded'}))
-	.pipe(hash())
-	.pipe(dest('./docs'))
-	.pipe(cachebust())
+	.pipe(hashFilename())
+	.pipe(dest('./docs/css'))
+	.pipe(logFilenameHash())
 	.pipe(dest('.'))
 }
 
 function buildJS(){
 	return src([
 		'./src/js/**'
-	])
+	], {base: './src/js'})
 	.pipe(concat('main.js'))
-	.pipe(hash())
-	.pipe(dest('./docs'))
-	.pipe(cachebust())
+	.pipe(hashFilename())
+	.pipe(dest('./docs/js'))
+	.pipe(logFilenameHash())
 	.pipe(dest('.'))
 }
 
@@ -48,38 +46,44 @@ function buildVendorJS(){
 		'./node_modules/mithril/mithril.min.js'
 	])
 	.pipe(concat('vendor.js'))
-	.pipe(hash())
-	.pipe(dest('./docs'))
-	.pipe(cachebust())
+	.pipe(hashFilename())
+	.pipe(dest('./docs/vendor'))
+	.pipe(logFilenameHash())
+	.pipe(dest('.'))
+}
+
+function buildMedia(){
+	return src([
+		'./src/media/**'
+	], {base: './src/media'})
+	.pipe(hashFilename())
+	.pipe(dest('./docs/media'))
+	.pipe(logFilenameHash())
 	.pipe(dest('.'))
 }
 
 function buildHTMLTemplates(){
-	const env = JSON.parse(JSON.stringify(ENV))
-
-	const cachebusters = JSON.parse(fs.readFileSync('./cachebusters.json'))
-	Object.assign(env, cachebusters)
-
 	return src([
-		'./src/html/**'
+		'./src/html/**/*.html'
 	], {base: './src/html'})
 	.pipe(replace(/\{\%\s*([a-zA-Z0-9\._-]+)\s*\%\}/ig, (match, varname)=>{
-		return env[varname] || match
+		return ENV[varname] || match
 	}))
 	.pipe(dest('./docs'))
 }
 
 exports.build = series([
-	clean,
+	()=>del(['./docs']),
 	buildCSS,
 	buildJS,
 	buildVendorJS,
+	buildMedia,
 	buildHTMLTemplates
 ])
 
 exports.watch = ()=>{
 	return watch('./src/**', {ignoreInitial: false}, series([
-		clean,
+		()=>del(['./docs/**/*.html', '!./docs', './docs/css', './docs/js']),
 		buildCSS,
 		buildJS,
 		buildHTMLTemplates
